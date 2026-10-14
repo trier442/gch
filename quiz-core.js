@@ -27,7 +27,7 @@ if(mock){
 }
 if(!Q.length||Q.some(q=>!Array.isArray(q.options)||q.answer<0||q.answer>=q.options.length)){error('문항 데이터 점검에 실패했습니다. 사이트 관리 담당자에게 알려 주세요.');return}
 chapters.forEach(c=>c.qs.forEach(q=>{q.chapter=c.id;byId[q.id]=q}));chMap=Object.fromEntries(chapters.map(c=>[c.id,c]));
-const key=mock2?'gch-quiz-list-v1-mock2':mock?'gch-quiz-list-v6-mock':'gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
+const key=mock2?'gch-quiz-list-v2-mock2':mock?'gch-quiz-list-v6-mock':'gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
 const safeParse=(txt,fallback)=>{try{return JSON.parse(txt)||fallback}catch(e){return fallback}};
 let state=safeParse(localStorage.getItem(key),{answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false});
 for(const name of ['answers','wrongs','attempts'])if(!state[name]||typeof state[name]!=='object')state[name]={};
