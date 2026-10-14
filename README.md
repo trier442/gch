@@ -1,37 +1,37 @@
-# 과천외고 2학년 화법과 언어 실력 측정 사이트
+# 과천외고 2학년 화법과 언어 온라인 시험
 
-이 저장소는 사용자가 첨부한 **「음운단원 수업자료 수정.pdf」**만을 바탕으로 구성한 226문항 시험 사이트입니다. 경기외고의 다른 문서는 사용하지 않았습니다.
+학생용 시험 세 탭과 교사용 성적 관리를 제공합니다.
 
-## 화면 주소 (GitHub Pages가 활성화된 후)
-- 학생용 시험: https://trier442.github.io/gch/
-- 교사용 성적 관리: https://trier442.github.io/gch/teacher.html
-- 소스 코드: https://github.com/trier442/gch
+| 메뉴 | 접속 주소 | 현행 문항 수 |
+|---|---|---:|
+| 음운 수업자료 핵심 응용 | https://trier442.github.io/gch/ | 73 |
+| 박시언 교과서 핵심·응용 | https://trier442.github.io/gch/textbook.html | 180 |
+| 최종 파이널 원문 시험 | https://trier442.github.io/gch/final62.html | 62 |
+| 교사용 성적 조회 | https://trier442.github.io/gch/teacher.html | 누적 응시 결과 |
 
-## GitHub Pages 공개 설정
-1. GitHub에서 이 저장소의 **Settings → Pages**를 엽니다.
-2. **Build and deployment → Source: Deploy from a branch**로 지정합니다.
-3. **Branch: main / (root)**를 선택하고 **Save**를 누릅니다.
-4. 발행이 완료되면 위 주소로 접속합니다.
+## 학생 화면
+- 배곧고 시험 사이트를 참고한 **좌측 단원 메뉴 + 우측 문제 카드** 구성입니다.
+- 각 보기 클릭 **즉시 정오답/정답/상세 해설** 표시, 오답노트 자동 누적, 재시험, 진행률 기록 기능이 있습니다.
+- 교과서는 기존 1,070개 문항 중 기본 정의·동일 유형 반복을 배제하고 **기존 문항 자체를 변경하지 않은 180개 응용·적용 문항**만 노출합니다.
+- 음운 수업자료는 기존 문제은행에서 73개를 선별합니다.
+- 최종 파이널 시험은 사용자가 첨부한 원본 62문항을 생략·변형하지 않고 **원본 문제 이미지 62개/해설 이미지 62개/제시문 원본 전체 페이지 21개**를 사용합니다. 정답 번호는 원본 교사용 정답표를 따릅니다.
+- 학생 브라우저에 오답이 보관되며, 시험 전체 완료 후 성적 제출 버튼으로 서버에 교사용 보고서를 전송할 수 있습니다.
 
-## 파일 구성
-- `index.html`: 학생 이름/반 입력, 단원별 응시, 자동채점, 오답 확인, 성적 제출
-- `teacher.html`: 선생님 로그인, 학생별 점수/오답 목록, 검색 및 CSV
-- `data.js`: 첨부 PDF 기반 226문항과 자료 데이터
-- `questions.json`, `sources.json`: 문제은행 및 근거 자료
-- `config.js`: Supabase 연결 설정
-- `setup.sql`: 결과 저장 테이블 및 기본 RLS 정책
+## 파일
+- `index.html`, `textbook.html`, `final62.html`: 학생 세 탭
+- `quiz-ui.css`, `quiz-core.js`: 공통 화면/즉시 채점/오답노트
+- `curated_phonology.js`, `curated_textbook.js`: 선별 문제 ID (원 데이터 그대로)
+- `data.js`, `textbook_q1.js`~`textbook_q12.js`: 기존 원 데이터
+- `final_data.js`, `final_media1.js`~`final_media23.js`: 원문 파이널 문제·정답·원본 해설
+- `config.js`, `teacher.html`, `setup.sql`: Supabase 연결 및 교사용 성적 관리
 
-## 교사용 성적 자동 수집 — 추가 설정 필요
-**GitHub Pages에 업로드하는 것만으로 학생들의 성적이 선생님에게 모이지는 않습니다.** 서로 다른 기기의 성적을 수집하려면 별도의 데이터베이스를 연결해야 합니다.
+## 공개 및 성적 수집
+GitHub Pages가 꺼져 있다면 GitHub 저장소의 **Settings → Pages → Deploy from a branch → main / (root) → Save**에서 먼저 켜야 위 공개 URL이 열립니다.
 
-1. Supabase 프로젝트를 생성하고 SQL Editor에서 `setup.sql`을 실행합니다.
-2. Supabase Authentication에서 선생님 이메일 계정을 생성합니다.
-3. 아래의 `TEACHER_EMAIL@example.com`을 선생님 이메일로 바꾸어 SQL Editor에서 실행합니다.
-   ```sql
-   create policy "teacher_reads_results" on public.exam_results for select to authenticated
-   using (auth.jwt() ->> 'email' = 'TEACHER_EMAIL@example.com');
-   ```
-4. `config.js`에 Supabase Project URL과 **publishable/anon key**를 입력합니다. **service_role/secret 키는 절대 업로드하지 마세요.**
-5. 시험 제출 후 선생님 계정으로 `teacher.html`에 로그인하여 성적과 오답을 확인합니다.
+Supabase 프로젝트에는 `exam_results` 및 `teacher_allowlist`가 이미 구성되어 있습니다. 교사용 로그인을 위해 인증 계정 등록 및 허용 이메일 검증이 필요합니다. 공개 설정 파일에 service_role/secret 키는 절대로 넣지 마세요.
 
-**주의:** 설정 전에는 학생 결과가 서버로 자동 전송되지 않습니다. 학생 이름·반·성적은 개인정보에 해당하므로 동의 안내, 보존 기간 및 접근 통제를 먼저 마련하세요. 현재 익명 제출 API는 신원 확인·스팸 방지가 없어 실제 운영 시 CAPTCHA, 사용량 제한 및 학생 인증이 필요합니다.
+## 검수
+- 텍스트 180문항: 12개 단원, 정답 번호 범위 및 선택지 검증.
+- 음운 73문항: 7개 단원, 원 문제은행 정답 인덱스 유지.
+- 원문 파이널 62문항: 원본 페이지 매핑 및 145개 이미지 디코딩 확인.
+- 세 탭 모두 클릭 즉시 정오답·해설·오답 재풀이 브라우저 렌더링 테스트 수행.
