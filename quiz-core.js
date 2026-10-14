@@ -27,7 +27,7 @@ if(mock){
 }
 if(!Q.length||Q.some(q=>!Array.isArray(q.options)||q.answer<0||q.answer>=q.options.length)){error('문항 데이터 점검에 실패했습니다. 사이트 관리 담당자에게 알려 주세요.');return}
 chapters.forEach(c=>c.qs.forEach(q=>{q.chapter=c.id;byId[q.id]=q}));chMap=Object.fromEntries(chapters.map(c=>[c.id,c]));
-const key='gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
+const key=mock?'gch-quiz-list-v5-mock':'gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
 const safeParse=(txt,fallback)=>{try{return JSON.parse(txt)||fallback}catch(e){return fallback}};
 let state=safeParse(localStorage.getItem(key),{answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false});
 for(const name of ['answers','wrongs','attempts'])if(!state[name]||typeof state[name]!=='object')state[name]={};
@@ -74,13 +74,20 @@ function renderNav(){const box=$('chapterList');box.innerHTML=chapters.map((c,i)
 function renderHead(){const c=CH(),p=count(c.qs);$('chapterHead').innerHTML=`<h2>${esc(c.title)}</h2><div class="meta"><span>${esc(c.sub)}</span><span>정답 ${p.correct} / 응답 ${p.answered}</span></div><div class="progress"><div class="progress-line"><span>학습 진행률</span><span>${Math.round(p.answered/c.qs.length*100)}%</span></div><div class="bar"><span style="width:${Math.round(p.answered/c.qs.length*100)}%"></span></div></div>`;}
 function contextPages(n,p){if(n>=28&&n<=30)return [8,9];if(n>=31&&n<=33)return [9];if(n>=34&&n<=43)return [10,11,12,13];if(n>=44&&n<=46)return [14,15];if(n>=47&&n<=50)return [16,17];if(n>=51&&n<=62)return [18,19];return [p]}
 function questionMarkup(q){const a=state.answers[q.id],wrong=!a?false:!a.correct;
- let stem=final?`<div class="source-info">${q.page}쪽 · ${q.serial}번</div><img class="stem-image" loading="lazy" alt="${q.serial}번 문제 원문과 보기" src="${q.image}">`:`<div class="stem">${esc(q.stem)}</div>${textbook?`<div class="source-info">교과서 ${q.page}쪽</div>`:''}`;
+ let stem=final?`<div class="source-info">${q.page}쪽 · ${q.serial}번</div><img class="stem-image" loading="lazy" alt="${q.serial}번 문제 원문과 보기" src="${q.image}">`:`<div class="stem">${mock?esc(q.stem).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'):esc(q.stem)}</div>${textbook?`<div class="source-info">교과서 ${q.page}쪽</div>`:''}`;
  if(final&&q.serial>=28){const pages=contextPages(q.serial,q.page);stem+=`<details class="source-expand"><summary>이 문항의 공통 제시문 보기 · PDF ${pages.join(', ')}쪽</summary>${pages.map(p=>`<p class="source-caption">제시문 ${p}쪽</p><img class="source-img" loading="lazy" alt="공통 제시문 ${p}쪽" src="${media['p'+p]}">`).join('')}</details>`}
  const buttons=q.options.map((option,j)=>{let cls='choice';if(a){if(j===q.answer)cls+=' correct';else if(j===a.choice&&wrong)cls+=' wrong'}return `<button type="button" class="${cls}" data-select="${q.id}" data-choice="${j}" ${a?'disabled':''} aria-label="${final?labels[j+1]+' 보기':String(j+1)+'번 답'}"><span class="sym">${labels[j+1]}</span>${final?'':`<span>${esc(option)}</span>`}</button>`}).join('');
  let answerHtml='';if(a){const explain=final?`<p class="source-caption">${q.explainPage}쪽 해설</p><img class="feedback-image" loading="lazy" src="${q.explainImage}" alt="${q.serial}번 원본 상세 해설">`:`<p class="explain">${esc(q.explain)}</p>`;
  answerHtml=`<div class="feedback ${a.correct?'good':'bad'}" role="status"><strong>${a.correct?'✓ 정답입니다.':'✕ 오답입니다.'}</strong><span class="answer-diff">내 선택: ${final?labels[a.choice+1]:esc(q.options[a.choice])} &nbsp;·&nbsp; 정답: ${final?labels[q.answer+1]:esc(correctFor(q))}</span>${explain}<button type="button" class="retry" data-retry="${q.id}">이 문제 다시 풀기</button></div>`}
- return `<section class="qcard" id="q-${q.id}"><div class="qtop"><span class="qnum">${final?q.serial+'번':esc(q.topic.replace(/^\d+\s+/,''))+' · '+(CH().qs.indexOf(q)+1)+'번'}</span>${textbook?`<span class="tag">교과서 ${q.page}쪽</span>`:''}</div>${stem}<div class="choices ${final?'number-choices':''}">${buttons}</div>${answerHtml}</section>`;}
-function renderQuestions(){ $('questions').innerHTML=CH().qs.map(questionMarkup).join('') }
+ return `<section class="qcard" id="q-${q.id}"><div class="qtop"><span class="qnum">${(final||mock)?q.serial+'번':esc(q.topic.replace(/^\d+\s+/,''))+' · '+(CH().qs.indexOf(q)+1)+'번'}</span>${mock?`<span class="tag">${esc(q.topic)}</span>`:textbook?`<span class="tag">교과서 ${q.page}쪽</span>`:''}</div>${stem}<div class="choices ${final?'number-choices':''}">${buttons}</div>${answerHtml}</section>`;}
+function renderQuestions(){
+ const list=CH().qs;
+ $('questions').innerHTML=list.map((q,i)=>{
+  const first=mock&&(i===0||list[i-1].group!==q.group);
+  const passage=first&&q.passage?`<section class="mock-passage panel" id="passage-${esc(q.group)}"><div class="mock-passage-head">공통 제시문 · ${q.n}~${Math.min(q.n+4,30)}번</div><div class="mock-passage-text">${esc(q.passage)}</div></section>`:'';
+  return passage+questionMarkup(q);
+ }).join('');
+}
 function renderWrong(){const items=Object.keys(state.wrongs).map(id=>byId[id]).filter(Boolean).sort((a,b)=>a.chapter.localeCompare(b.chapter)||(a.serial||0)-(b.serial||0)||a.id.localeCompare(b.id));$('sideWrong').textContent=items.length;$('floatingWrong').textContent=items.length;
  $('wrongList').innerHTML=items.length?items.map(q=>{const a=state.wrongs[q.id],detail=final?`<details><summary>원본 해설 펼치기</summary><img loading="lazy" alt="${q.serial}번 해설" src="${q.explainImage}"></details>`:`<p>${esc(q.explain)}</p>`;
  return `<div class="wrong-item"><strong>${esc(chMap[q.chapter].title)} · ${final?q.serial+'번':esc(q.stem)}</strong><div class="wrong-answer">내가 고른 답: ${final?labels[a.choice+1]:esc(q.options[a.choice])}</div><div class="right-answer">정답: ${final?labels[q.answer+1]:esc(correctFor(q))}</div>${detail}<button class="jump" type="button" data-goto="${q.id}">오답 다시 풀기</button></div>`}).join(''):'<div class="wrong-empty">현재 남아 있는 오답이 없습니다. 틀린 문항은 자동으로 이곳에 모입니다.</div>';
