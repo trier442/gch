@@ -23,25 +23,51 @@ if(final){
 }
 if(!Q.length||Q.some(q=>!Array.isArray(q.options)||q.answer<0||q.answer>=q.options.length)){error('문항 데이터 점검에 실패했습니다. 사이트 관리 담당자에게 알려 주세요.');return}
 chapters.forEach(c=>c.qs.forEach(q=>{q.chapter=c.id;byId[q.id]=q}));chMap=Object.fromEntries(chapters.map(c=>[c.id,c]));
-const key='gch-quiz-list-v3-'+mode,profileKey='gch-student-profile-v1';
+const key='gch-quiz-list-v3-'+mode,profileKey='gch-student-profile-v2-'+mode;
 const safeParse=(txt,fallback)=>{try{return JSON.parse(txt)||fallback}catch(e){return fallback}};
 let state=safeParse(localStorage.getItem(key),{answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false});
 for(const name of ['answers','wrongs','attempts'])if(!state[name]||typeof state[name]!=='object')state[name]={};
 if(!chMap[state.chapter])state.chapter=chapters[0].id;if(!Number.isFinite(state.start))state.start=Date.now();
 if(final&&Object.keys(state.answers).length===0){const old=safeParse(localStorage.getItem('gch-final62-original-20261014'),{});if(Array.isArray(old.answers)&&old.answers.length===62){old.answers.forEach((n,i)=>{const q=Q[i];if(Number.isInteger(n)&&n>=1&&n<=5){const ok=n-1===q.answer;state.answers[q.id]={choice:n-1,correct:ok};if(!ok)state.wrongs[q.id]={choice:n-1};}});state.start=old.start||Date.now();}}
-let profile=safeParse(localStorage.getItem(profileKey),{name:'',group:''});
+// One student registration per tab. Migrate an existing student profile for convenience,
+// then keep future changes separate in the three learning tabs.
+const priorProfile=safeParse(localStorage.getItem('gch-student-profile-v1'),{name:'',group:''});
+let profile=safeParse(localStorage.getItem(profileKey),null)||priorProfile;
+if(!profile||typeof profile!=='object')profile={name:'',group:''};
+profile={name:String(profile.name||'').slice(0,30),group:String(profile.group||'').slice(0,30)};
+let editingProfile=!profile.name.trim();
+
 const CH=()=>chMap[state.chapter];
 const correctFor=q=>q.options[q.answer];
 const count=(arr)=>({answered:arr.filter(q=>state.answers[q.id]).length,correct:arr.filter(q=>state.answers[q.id]?.correct).length});
 const save=()=>{try{localStorage.setItem(key,JSON.stringify(state))}catch(e){console.warn('풀이 기록 저장 실패',e)}};
 function error(msg){document.body.innerHTML='<main class="wrap"><div class="panel error">'+esc(msg)+'</div></main>'}
 function renderFrame(){const badges=[chapters.length+'개 영역',Q.length+'문항',final?'원본 62문항 무변형':'적용·응용 중심','선택 즉시 해설','자동 오답노트'];
- $('app').innerHTML=`<div class="wrap"><header class="hero"><div style="font-size:13px;color:#d6e3ff">과천외고 2학년 · 화법과 언어</div><h1>${heading[mode]}</h1><p>${descriptions[mode]}</p><div class="badges">${badges.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div></header><nav class="mainnav" aria-label="학습 메뉴">${nav.map(([href,text,n])=>`<a href="${href}" class="${mode===n?'active':''}" ${mode===n?'aria-current="page"':''}>${text}</a>`).join('')}</nav><div class="dashboard"><aside class="sidebar panel"><div class="sidehead">단원별 문제 · <span id="overallProgress"></span></div><div id="chapterList" class="chapter-list"></div><div class="side-tools"><button type="button" class="tool-btn" data-scrollwrong>오답노트 보기 (<span id="sideWrong">0</span>)</button><button type="button" class="tool-btn danger" data-reset>전체 풀이 기록 초기화</button></div></aside><main class="main"><section id="chapterHead" class="chapter-head panel"></section><div id="questions"></div><section id="wrongbook" class="wrongbook panel"><h2>오답노트</h2><p class="notice">틀린 문항은 이곳에 자동 저장됩니다. 다시 풀어 맞히면 오답노트에서 사라집니다.</p><div id="wrongList"></div></section><section class="submit-card panel"><h3>선생님께 성적 제출</h3><div class="meta"><span id="resultStat"></span></div><div class="submit-actions"><button type="button" class="primary" id="submitResults">성적·오답 제출</button><button type="button" class="primary alt" id="exportCsv">성적 CSV 저장</button></div><p class="status" id="submitStatus" role="status"></p><p class="notice">선택 즉시 채점되고 기록은 이 기기에 자동 보관됩니다. 모든 문항을 푼 뒤 성적 제출을 누르면 선생님 관리 페이지로 전송됩니다.</p></section></main></div><div class="footer">더소피국어학원 · 과천외고 화법과 언어</div></div><button type="button" class="float-wrong" data-scrollwrong>오답 <span id="floatingWrong">0</span></button>`;
+ $('app').innerHTML=`<div class="wrap"><header class="hero"><div style="font-size:13px;color:#d6e3ff">과천외고 2학년 · 화법과 언어</div><h1>${heading[mode]}</h1><p>${descriptions[mode]}</p><div class="badges">${badges.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div></header><nav class="mainnav" aria-label="학습 메뉴">${nav.map(([href,text,n])=>`<a href="${href}" class="${mode===n?'active':''}" ${mode===n?'aria-current="page"':''}>${text}</a>`).join('')}</nav><div class="dashboard"><aside class="sidebar panel"><div class="sidehead">단원별 문제 · <span id="overallProgress"></span></div><div id="studentProfile" class="student-profile"></div><div id="chapterList" class="chapter-list"></div><div class="side-tools"><button type="button" class="tool-btn" data-scrollwrong>오답노트 보기 (<span id="sideWrong">0</span>)</button><button type="button" class="tool-btn danger" data-reset>전체 풀이 기록 초기화</button></div></aside><main class="main"><section id="chapterHead" class="chapter-head panel"></section><div id="questions"></div><section id="wrongbook" class="wrongbook panel"><h2>오답노트</h2><p class="notice">틀린 문항은 이곳에 자동 저장됩니다. 다시 풀어 맞히면 오답노트에서 사라집니다.</p><div id="wrongList"></div></section><section class="submit-card panel"><h3>선생님께 성적 제출</h3><div class="meta"><span id="resultStat"></span></div><div class="submit-actions"><button type="button" class="primary" id="submitResults">성적·오답 제출</button><button type="button" class="primary alt" id="exportCsv">성적 CSV 저장</button></div><p class="status" id="submitStatus" role="status"></p><p class="notice">선택 즉시 채점되고 기록은 이 기기에 자동 보관됩니다. 모든 문항을 푼 뒤 성적 제출을 누르면 선생님 관리 페이지로 전송됩니다.</p></section></main></div><div class="footer">더소피국어학원 · 과천외고 화법과 언어</div></div><button type="button" class="float-wrong" data-scrollwrong>오답 <span id="floatingWrong">0</span></button>`;
  $('app').addEventListener('click',onClick);
- $('app').addEventListener('input',e=>{if(e.target.id==='studentName'||e.target.id==='studentGroup'){profile={name:$('studentName').value.trim(),group:$('studentGroup').value.trim()};try{localStorage.setItem(profileKey,JSON.stringify(profile))}catch(e){}}});
+ renderProfile();
+}
+function renderProfile(){
+ const box=$('studentProfile');if(!box)return;
+ if(!editingProfile&&profile.name.trim()){
+  box.innerHTML=`<div class="profile-heading">응시 학생 <span class="saved-mark">✓ 등록됨</span></div><div class="profile-display"><strong>${esc(profile.name)}</strong><span>${esc(profile.group||'반 미입력')}</span></div><button type="button" class="profile-edit" data-edit-profile>학생 정보 수정</button><p class="profile-note">이 탭에서는 한 번만 등록하면 됩니다. 모든 회차와 재시험에 자동 적용됩니다.</p>`;
+ }else{
+  box.innerHTML=`<div class="profile-heading">처음 한 번 학생 등록</div><label class="profile-field">학생 이름 <input id="studentName" maxlength="30" autocomplete="name" placeholder="이름 입력" value="${esc(profile.name)}"></label><label class="profile-field">반 / 그룹 <input id="studentGroup" maxlength="30" placeholder="예: 2학년 1반" value="${esc(profile.group)}"></label><button type="button" class="profile-save" data-save-profile>이름 저장하고 시작</button><p class="profile-note">저장 후에는 회차마다 다시 입력하지 않습니다. 이 기기의 현재 시험 탭에만 적용됩니다.</p>`;
+ }
+}
+function saveProfile(){
+ const name=$('studentName')?.value.trim()||'',group=$('studentGroup')?.value.trim()||'';
+ if(!name){$('studentName')?.focus();alert('학생 이름을 입력해 주세요.');return}
+ const changed=Boolean(profile.name.trim()&&profile.name!==name);
+ if(changed&&Object.keys(state.answers).length>0){
+  if(!confirm('다른 학생으로 변경하면 이 시험 탭의 풀이·오답 기록이 초기화됩니다. 변경하시겠습니까?'))return;
+  state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false};save();
+ }
+ profile={name,group};try{localStorage.setItem(profileKey,JSON.stringify(profile))}catch(e){console.warn('학생 정보 저장 실패',e)}
+ editingProfile=false;renderProfile();if(changed)render();
 }
 function renderNav(){const box=$('chapterList');box.innerHTML=chapters.map((c,i)=>{const p=count(c.qs);return `<button type="button" class="chapter-btn ${c.id===state.chapter?'active':''}" data-chapter="${c.id}"><b>${String(i+1).padStart(2,'0')}.</b><span>${esc(c.title)}<small>${p.answered}/${c.qs.length} 완료 · 정답 ${p.correct}</small></span></button>`}).join('');const all=count(Q);$('overallProgress').textContent=all.answered+'/'+Q.length;}
-function renderHead(){const c=CH(),p=count(c.qs);$('chapterHead').innerHTML=`<h2>${esc(c.title)}</h2><div class="meta"><span>${esc(c.sub)}</span><span>정답 ${p.correct} / 응답 ${p.answered}</span></div><div class="summary">${final?'문제 본문·선택지는 원본 PDF를 그대로 표시합니다. 해당 문항의 ①~⑤ 번호만 선택하세요.':esc(c.sub)+' · 보기를 클릭하는 즉시 문항 아래에 정오답과 해설이 나타납니다.'}</div><div class="progress"><div class="progress-line"><span>학습 진행률</span><span>${Math.round(p.answered/c.qs.length*100)}%</span></div><div class="bar"><span style="width:${Math.round(p.answered/c.qs.length*100)}%"></span></div></div><div class="profile"><label>학생 이름<input id="studentName" maxlength="30" placeholder="이름 입력" value="${esc(profile.name||'')}"></label><label>반 / 그룹<input id="studentGroup" maxlength="30" placeholder="예: 2학년 1반" value="${esc(profile.group||'')}"></label><small>응시 중에는 이름 없이 풀 수 있지만 교사용 성적 제출 시 이름이 필요합니다.</small></div>`;}
+function renderHead(){const c=CH(),p=count(c.qs);$('chapterHead').innerHTML=`<h2>${esc(c.title)}</h2><div class="meta"><span>${esc(c.sub)}</span><span>정답 ${p.correct} / 응답 ${p.answered}</span></div><div class="summary">${final?'문제 본문·선택지는 원본 PDF를 그대로 표시합니다. 해당 문항의 ①~⑤ 번호만 선택하세요.':esc(c.sub)+' · 보기를 클릭하는 즉시 문항 아래에 정오답과 해설이 나타납니다.'}</div><div class="progress"><div class="progress-line"><span>학습 진행률</span><span>${Math.round(p.answered/c.qs.length*100)}%</span></div><div class="bar"><span style="width:${Math.round(p.answered/c.qs.length*100)}%"></span></div></div>`;}
 function contextPages(n,p){if(n>=28&&n<=30)return [8,9];if(n>=31&&n<=33)return [9];if(n>=34&&n<=43)return [10,11,12,13];if(n>=44&&n<=46)return [14,15];if(n>=47&&n<=50)return [16,17];if(n>=51&&n<=62)return [18,19];return [p]}
 function questionMarkup(q){const a=state.answers[q.id],wrong=!a?false:!a.correct;
  let stem=final?`<div class="source-info">첨부 원본 PDF ${q.page}쪽 · ${q.serial}번</div><img class="stem-image" loading="lazy" alt="${q.serial}번 문제 원문과 보기" src="${q.image}">`:`<div class="stem">${esc(q.stem)}</div><div class="source-info">${textbook?'교과서 '+q.page+'쪽':'음운 수업자료'} · 원문 문제은행 문항</div>`;
@@ -69,7 +95,7 @@ function setChapter(id){if(!chMap[id])return;state.chapter=id;save();render();wi
 function reset(){if(!confirm('이 시험 탭의 모든 풀이와 오답 기록을 초기화하시겠습니까? 다른 시험의 기록은 유지됩니다.'))return;state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false};save();render();window.scrollTo({top:0,behavior:'smooth'})}
 function csv(){const rows=[['문항','단원','원본쪽','학생선택','정답','정오','해설']];Q.forEach(q=>{const a=state.answers[q.id];rows.push([final?q.serial:q.id,chMap[q.chapter].title,q.page,a?(final?labels[a.choice+1]:q.options[a.choice]):'미응답',final?labels[q.answer+1]:correctFor(q),!a?'미응답':a.correct?'정답':'오답',final?'첨부 원본 PDF '+q.explainPage+'쪽 해설':q.explain])});let result='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([result],{type:'text/csv;charset=utf-8'}));link.download='과천외고_'+(final?'파이널62':textbook?'교과서핵심':'음운핵심')+'_성적오답.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)}
 async function submit(){const status=$('submitStatus'),done=count(Q),cfg=window.EXAM_CONFIG||{},name=(profile.name||'').trim(),group=(profile.group||'').trim();
- if(!name){status.textContent='학생 이름을 입력한 다음 제출해 주세요.';$('studentName')?.focus();return}
+ if(!name){status.textContent='왼쪽 응시 학생 칸에서 이름을 한 번 등록해 주세요.';editingProfile=true;renderProfile();$('studentName')?.focus();$('studentProfile')?.scrollIntoView({block:'center',behavior:'smooth'});return}
  if(done.answered!==Q.length){status.textContent=`미응답 ${Q.length-done.answered}문항이 남았습니다. 전부 선택한 후 제출해 주세요.`;return}
  if(state.submitted){status.textContent='이미 제출한 답안입니다. 다시 제출하려면 문제를 다시 풀어 주세요.';return}
  if(!cfg.supabaseUrl||!cfg.supabaseAnonKey){status.textContent='데이터베이스 연결 정보가 없습니다. CSV 파일을 저장해 선생님께 전달하세요.';return}
@@ -78,6 +104,7 @@ async function submit(){const status=$('submitStatus'),done=count(Q),cfg=window.
  try{const res=await fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/rest/v1/exam_results',{method:'POST',headers:{apikey:cfg.supabaseAnonKey,Authorization:'Bearer '+cfg.supabaseAnonKey,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(record)});if(!res.ok)throw Error('HTTP '+res.status);state.submitted=true;save();status.textContent='✓ 제출 완료: '+done.correct+'/'+Q.length+' 정답 · '+record.score+'점. 교사용 성적 관리 페이지에서 확인할 수 있습니다.'}catch(e){status.textContent='서버 전송 실패: '+e.message+' · CSV를 저장해 선생님께 전달하세요.'}finally{$('submitResults').disabled=false}
 }
 function onClick(e){const target=e.target.closest('button');if(!target)return;const d=target.dataset;
+ if(target.hasAttribute('data-save-profile')){saveProfile();return}if(target.hasAttribute('data-edit-profile')){editingProfile=true;renderProfile();$('studentName')?.focus();return}
  if(d.chapter){setChapter(d.chapter);return}if(d.select){choose(d.select,Number(d.choice));return}if(d.retry){retry(d.retry);return}if(d.goto){goto(d.goto);return}if(target.hasAttribute('data-scrollwrong')){$('wrongbook').scrollIntoView({behavior:'smooth'});return}if(target.hasAttribute('data-reset')){reset();return}if(target.id==='submitResults'){submit();return}if(target.id==='exportCsv'){csv();return}}
 renderFrame();render();save();
 })();
