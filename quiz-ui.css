@@ -28,3 +28,6 @@ a{color:inherit}button,input{font:inherit}button{cursor:pointer}button:disabled{
 .mock-passage-text{font-family:'Noto Serif KR','Batang','Malgun Gothic',serif;white-space:pre-wrap;line-height:1.94;font-size:15px;letter-spacing:-.018em;color:#242a35;overflow-wrap:anywhere}
 .qcard .stem strong{font-weight:950;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 @media(max-width:600px){.mock-passage{padding:19px 16px}.mock-passage-text{font-size:14px;line-height:1.86}}
+
+.passage-jump{font-size:12px;font-weight:750;color:#3654a1;text-decoration:none;white-space:nowrap;margin-left:auto;padding:5px 8px;border-radius:7px;background:#eff3ff}
+.passage-jump:hover{text-decoration:underline;background:#e0e9ff}
