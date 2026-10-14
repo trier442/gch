@@ -1,16 +1,16 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id),mode=document.body.dataset.mode||'phonology',final=mode==='final',textbook=mode==='textbook',mock=mode==='mock';
+const $=id=>document.getElementById(id),mode=document.body.dataset.mode||'phonology',final=mode==='final',textbook=mode==='textbook',mock2=mode==='mock2',mock=mode==='mock'||mock2;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels=['','①','②','③','④','⑤'];
 const meta=window.FINAL_META||[],media=window.FINAL_MEDIA||{};
 let Q=[],chapters=[],chMap={},byId={};
-const heading={phonology:'음운 학습',textbook:'교과서 테스트',final:'최종 파이널 테스트',mock:'실전 모의고사 1회'};
-const nav=[['index.html','음운 학습','phonology'],['textbook.html','교과서 테스트','textbook'],['final62.html','최종 파이널 테스트','final'],['mock1.html','실전 모의고사 1회','mock'],['teacher.html','교사용 성적 관리','teacher']];
+const heading={phonology:'음운 학습',textbook:'교과서 테스트',final:'최종 파이널 테스트',mock:'실전 모의고사 1회',mock2:'실전 모의고사 2회'};
+const nav=[['index.html','음운 학습','phonology'],['textbook.html','교과서 테스트','textbook'],['final62.html','최종 파이널 테스트','final'],['mock1.html','실전 모의고사 1회','mock'],['mock2.html','실전 모의고사 2회','mock2'],['teacher.html','교사용 성적 관리','teacher']];
 if(mock){
- const list=window.MOCK1_PARTS||[];
- if(list.length!==30||!list.every((q,i)=>q.n===i+1&&Array.isArray(q.options)&&q.options.length===5&&q.answer>=0&&q.answer<5&&q.explain)){error('실전 모의고사 30문항을 불러오지 못했습니다. 새로고침해 주세요.');return}
- Q=list.map(q=>({...q,id:'m'+q.n,serial:q.n,kind:'객관식'}));
- chapters=[{id:'c1',title:'실전 모의고사 1회',sub:'30문항',qs:Q}];
+ const list=mock2?(window.MOCK2_PARTS||[]):(window.MOCK1_PARTS||[]);
+ if(list.length!==30||!list.every((q,i)=>q.n===i+1&&Array.isArray(q.options)&&q.options.length===5&&q.answer>=0&&q.answer<5&&q.explain)){error('실전 모의고사 '+(mock2?'2':'1')+'회 30문항을 불러오지 못했습니다. 새로고침해 주세요.');return}
+ Q=list.map(q=>({...q,id:(mock2?'m2-':'m')+q.n,serial:q.n,kind:'객관식'}));
+ chapters=[{id:'c1',title:mock2?'실전 모의고사 2회':'실전 모의고사 1회',sub:'30문항',qs:Q}];
 }else if(final){
  if(meta.length!==62||!meta.every((m,i)=>m.id===i+1&&m.answer>=1&&m.answer<=5&&media['q'+m.id]&&media['a'+m.id])){error('원본 62문항 및 해설 이미지를 불러오지 못했습니다. 페이지를 다시 불러오세요.');return}
  Q=meta.map(m=>({id:'f'+m.id,serial:m.id,topic:'최종 파이널',page:m.page,explainPage:m.explain_page,kind:'원문 객관식',stem:m.id+'번',answer:m.answer-1,options:labels.slice(1),explain:'첨부된 원본 정답 및 해설 페이지를 그대로 표시합니다.',image:media['q'+m.id],explainImage:media['a'+m.id]}));
@@ -27,7 +27,7 @@ if(mock){
 }
 if(!Q.length||Q.some(q=>!Array.isArray(q.options)||q.answer<0||q.answer>=q.options.length)){error('문항 데이터 점검에 실패했습니다. 사이트 관리 담당자에게 알려 주세요.');return}
 chapters.forEach(c=>c.qs.forEach(q=>{q.chapter=c.id;byId[q.id]=q}));chMap=Object.fromEntries(chapters.map(c=>[c.id,c]));
-const key=mock?'gch-quiz-list-v6-mock':'gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
+const key=mock2?'gch-quiz-list-v1-mock2':mock?'gch-quiz-list-v6-mock':'gch-quiz-list-v4-'+mode,profileKey='gch-student-profile-v2-'+mode;
 const safeParse=(txt,fallback)=>{try{return JSON.parse(txt)||fallback}catch(e){return fallback}};
 let state=safeParse(localStorage.getItem(key),{answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false});
 for(const name of ['answers','wrongs','attempts'])if(!state[name]||typeof state[name]!=='object')state[name]={};
@@ -104,7 +104,7 @@ function retry(id){const q=byId[id];if(!q)return;delete state.answers[id];state.
 function goto(id){retry(id)}
 function setChapter(id){if(!chMap[id])return;state.chapter=id;if(!state.chapterStarts[id])state.chapterStarts[id]=Date.now();save();render();$('submitStatus').textContent='';window.scrollTo({top:0,behavior:'smooth'})}
 function reset(){if(!confirm('이 시험 탭의 모든 풀이와 오답 기록을 초기화하시겠습니까? 다른 시험의 기록은 유지됩니다.'))return;state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false,submittedChapters:{},chapterStarts:{[chapters[0].id]:Date.now()}};save();render();window.scrollTo({top:0,behavior:'smooth'})}
-function csv(){const rows=[['문항','단원','원본쪽','학생선택','정답','정오','해설']];Q.forEach(q=>{const a=state.answers[q.id];rows.push([(final||mock)?q.serial:q.id,chMap[q.chapter].title,q.page,a?(final?labels[a.choice+1]:q.options[a.choice]):'미응답',final?labels[q.answer+1]:correctFor(q),!a?'미응답':a.correct?'정답':'오답',final?'첨부 원본 PDF '+q.explainPage+'쪽 해설':q.explain])});let result='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([result],{type:'text/csv;charset=utf-8'}));link.download='과천외고_'+(final?'파이널62':mock?'실전모의고사1회':textbook?'교과서핵심':'음운핵심')+'_성적오답.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)}
+function csv(){const rows=[['문항','단원','원본쪽','학생선택','정답','정오','해설']];Q.forEach(q=>{const a=state.answers[q.id];rows.push([(final||mock)?q.serial:q.id,chMap[q.chapter].title,q.page,a?(final?labels[a.choice+1]:q.options[a.choice]):'미응답',final?labels[q.answer+1]:correctFor(q),!a?'미응답':a.correct?'정답':'오답',final?'첨부 원본 PDF '+q.explainPage+'쪽 해설':q.explain])});let result='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([result],{type:'text/csv;charset=utf-8'}));link.download='과천외고_'+(final?'파이널62':mock2?'실전모의고사2회':mock?'실전모의고사1회':textbook?'교과서핵심':'음운핵심')+'_성적오답.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)}
 async function submit(){
  const status=$('submitStatus'),target=(final||mock)?Q:CH().qs,done=count(target),scope=(final||mock)?'all':CH().id;
  const cfg=window.EXAM_CONFIG||{},name=(profile.name||'').trim();
@@ -112,7 +112,7 @@ async function submit(){
  if(done.answered!==target.length){status.textContent='미응답 '+(target.length-done.answered)+'문항이 남았습니다. '+((final||mock)?'전체':'이 단원')+'를 모두 푼 뒤 제출해 주세요.';return}
  if(state.submittedChapters[scope]){status.textContent='이미 제출한 결과입니다. 다시 풀면 재제출할 수 있습니다.';return}
  if(!cfg.supabaseUrl||!cfg.supabaseAnonKey){status.textContent='성적 서버가 연결되지 않았습니다. CSV로 저장해 주세요.';return}
- const record={student_name:name,exam_source:final?'박시언 파이널 62문항':mock?'과천외고 실전 모의고사 1회':textbook?'박시언 교과서 테스트':'음운 학습',exam_mode:'practice',topic:final?'최종 파이널 테스트':CH().title,score:Math.round(done.correct/target.length*100),correct_count:done.correct,total_count:target.length,elapsed_seconds:Math.max(0,Math.round((Date.now()-((final||mock)?state.start:(state.chapterStarts[scope]||state.start)))/1000)),answers:target.map((q,i)=>{const a=state.answers[q.id];return {number:final?q.serial:i+1,question_id:q.id,topic:chMap[q.chapter].title,stem:final?'시험 PDF '+q.page+'쪽 '+q.serial+'번':q.stem,source_page:q.page,chosen:a?(final?labels[a.choice+1]:q.options[a.choice]):null,correct_answer:final?labels[q.answer+1]:correctFor(q),is_correct:!!a?.correct,explanation:final?'시험지 PDF '+q.explainPage+'쪽 해설':q.explain}}),submitted_at:new Date().toISOString()};
+ const record={student_name:name,exam_source:final?'박시언 파이널 62문항':mock2?'과천외고 실전 모의고사 2회':mock?'과천외고 실전 모의고사 1회':textbook?'박시언 교과서 테스트':'음운 학습',exam_mode:'practice',topic:final?'최종 파이널 테스트':CH().title,score:Math.round(done.correct/target.length*100),correct_count:done.correct,total_count:target.length,elapsed_seconds:Math.max(0,Math.round((Date.now()-((final||mock)?state.start:(state.chapterStarts[scope]||state.start)))/1000)),answers:target.map((q,i)=>{const a=state.answers[q.id];return {number:final?q.serial:i+1,question_id:q.id,topic:chMap[q.chapter].title,stem:final?'시험 PDF '+q.page+'쪽 '+q.serial+'번':q.stem,source_page:q.page,chosen:a?(final?labels[a.choice+1]:q.options[a.choice]):null,correct_answer:final?labels[q.answer+1]:correctFor(q),is_correct:!!a?.correct,explanation:final?'시험지 PDF '+q.explainPage+'쪽 해설':q.explain}}),submitted_at:new Date().toISOString()};
  status.textContent='성적 전송 중입니다…';$('submitResults').disabled=true;
  try{const base=cfg.supabaseUrl.endsWith('/')?cfg.supabaseUrl.slice(0,-1):cfg.supabaseUrl;const res=await fetch(base+'/rest/v1/exam_results',{method:'POST',headers:{apikey:cfg.supabaseAnonKey,Authorization:'Bearer '+cfg.supabaseAnonKey,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(record)});if(!res.ok)throw Error('HTTP '+res.status);state.submittedChapters[scope]=true;state.submitted=final||mock;save();status.textContent='✓ 제출 완료: '+done.correct+'/'+target.length+' 정답 · '+record.score+'점. 교사용 성적 관리 페이지에 저장되었습니다.'}
  catch(e){status.textContent='성적 전송 실패: '+e.message+' · CSV 파일을 저장해 선생님께 전달하세요.'}finally{$('submitResults').disabled=false}
