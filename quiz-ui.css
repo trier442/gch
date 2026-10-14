@@ -10,3 +10,15 @@ a{color:inherit}button,input{font:inherit}button{cursor:pointer}button:disabled{
 .submit-card{margin:16px 0;padding:18px 20px}.submit-card h3{margin:0 0 6px}.submit-actions{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0}.primary{background:var(--blue);border:0;color:#fff;border-radius:10px;padding:10px 16px;font-weight:750}.primary:hover{background:#2847ad}.primary.alt{background:#eef3ff;color:#2541a2;border:1px solid #cfdaff}.status{font-size:13px;color:var(--muted);min-height:22px}.stat-pill{display:inline-block;color:#285084;font-weight:700;padding:5px 8px;border-radius:9px;background:#f0f4fc}.notice{font-size:13px;color:var(--muted);line-height:1.7;margin-top:12px}.notice a{color:var(--blue)}.error{padding:20px;color:#912018;background:var(--redbg)}
 @media(max-width:900px){.wrap{padding:12px}.dashboard{grid-template-columns:1fr}.sidebar{position:static;max-height:unset}.chapter-list{display:flex;overflow:auto;gap:6px}.chapter-btn{min-width:200px}.hero{padding:25px 22px}.chapter-head{padding:18px}.qcard{padding:17px 15px}.stem{font-size:16px}.mainnav{margin-bottom:15px}}
 @media(max-width:520px){.choices.number-choices{gap:4px}.choices.number-choices .choice{padding:9px 0}.choices.number-choices .sym{font-size:21px}.mainnav a{font-size:12px;padding:7px 9px}}
+
+/* Student profile: register once for each exam tab, not once per chapter. */
+.student-profile{border-bottom:1px solid var(--line);padding:14px 16px;background:#f9fbff}
+.profile-heading{font-weight:850;font-size:14px;color:#24406f;margin:0 0 10px}
+.saved-mark{font-size:11px;font-weight:800;color:#087a55;background:#eaf8f2;padding:3px 6px;border-radius:8px}
+.profile-field{display:flex;flex-direction:column;gap:5px;margin:9px 0;color:#475467;font-size:12px;font-weight:750}
+.profile-field input{width:100%;min-width:0;border:1px solid #bfcbe0;border-radius:9px;padding:10px;font-size:14px;background:#fff}
+.profile-save,.profile-edit{display:block;width:100%;margin-top:9px;border:0;border-radius:9px;cursor:pointer;padding:9px 10px;font-weight:800;font-size:13px}
+.profile-save{background:#3157d5;color:white}
+.profile-edit{background:#eaf0ff;color:#2445a9}
+.profile-display{display:flex;flex-direction:column;gap:1px}.profile-display strong{font-size:17px}.profile-display span{font-size:13px;color:#667085}
+.profile-note{font-size:11px;line-height:1.5;color:#667085;margin:9px 0 0}
