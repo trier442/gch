@@ -60,7 +60,7 @@ function saveProfile(){
  const changed=Boolean(profile.name.trim()&&profile.name!==name);
  if(changed&&Object.keys(state.answers).length>0){
   if(!confirm('다른 학생으로 변경하면 이 시험 탭의 풀이·오답 기록이 초기화됩니다. 변경하시겠습니까?'))return;
-  state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false};save();
+  state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false,submittedChapters:{},chapterStarts:{[chapters[0].id]:Date.now()}};save();
  }
  profile={name};try{localStorage.setItem(profileKey,JSON.stringify(profile))}catch(e){console.warn('학생 정보 저장 실패',e)}
  editingProfile=false;renderProfile();if(changed)render();
@@ -91,7 +91,7 @@ function renderHeadProgress(){const c=CH(),p=count(c.qs);const old=$('chapterHea
 function retry(id){const q=byId[id];if(!q)return;delete state.answers[id];state.submitted=false;delete state.submittedChapters[final?'all':q.chapter];save();if(q.chapter!==state.chapter){state.chapter=q.chapter;save();render()}else{const card=$('q-'+id);if(card)card.outerHTML=questionMarkup(q);renderNav();renderHeadProgress();renderWrong()};setTimeout(()=> $('q-'+id)?.scrollIntoView({block:'center',behavior:'smooth'}),0);}
 function goto(id){retry(id)}
 function setChapter(id){if(!chMap[id])return;state.chapter=id;if(!state.chapterStarts[id])state.chapterStarts[id]=Date.now();save();render();$('submitStatus').textContent='';window.scrollTo({top:0,behavior:'smooth'})}
-function reset(){if(!confirm('이 시험 탭의 모든 풀이와 오답 기록을 초기화하시겠습니까? 다른 시험의 기록은 유지됩니다.'))return;state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false};save();render();window.scrollTo({top:0,behavior:'smooth'})}
+function reset(){if(!confirm('이 시험 탭의 모든 풀이와 오답 기록을 초기화하시겠습니까? 다른 시험의 기록은 유지됩니다.'))return;state={answers:{},wrongs:{},attempts:{},chapter:chapters[0].id,start:Date.now(),submitted:false,submittedChapters:{},chapterStarts:{[chapters[0].id]:Date.now()}};save();render();window.scrollTo({top:0,behavior:'smooth'})}
 function csv(){const rows=[['문항','단원','원본쪽','학생선택','정답','정오','해설']];Q.forEach(q=>{const a=state.answers[q.id];rows.push([final?q.serial:q.id,chMap[q.chapter].title,q.page,a?(final?labels[a.choice+1]:q.options[a.choice]):'미응답',final?labels[q.answer+1]:correctFor(q),!a?'미응답':a.correct?'정답':'오답',final?'첨부 원본 PDF '+q.explainPage+'쪽 해설':q.explain])});let result='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([result],{type:'text/csv;charset=utf-8'}));link.download='과천외고_'+(final?'파이널62':textbook?'교과서핵심':'음운핵심')+'_성적오답.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)}
 async function submit(){
  const status=$('submitStatus'),target=final?Q:CH().qs,done=count(target),scope=final?'all':CH().id;
