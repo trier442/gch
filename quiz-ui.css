@@ -22,3 +22,9 @@ a{color:inherit}button,input{font:inherit}button{cursor:pointer}button:disabled{
 .profile-edit{background:#eaf0ff;color:#2445a9}
 .profile-display{display:flex;flex-direction:column;gap:1px}.profile-display strong{font-size:17px}.profile-display span{font-size:13px;color:#667085}
 .profile-note{font-size:11px;line-height:1.5;color:#667085;margin:9px 0 0}
+/* Advanced mock exam 1: shared source texts */
+.mock-passage{margin:20px 0 15px;padding:25px 27px;border:1px solid #d7deeb;scroll-margin-top:14px}
+.mock-passage-head{font-size:14px;color:#294c8a;font-weight:850;margin-bottom:15px;padding-bottom:12px;border-bottom:1px solid #dce3f0}
+.mock-passage-text{font-family:'Noto Serif KR','Batang','Malgun Gothic',serif;white-space:pre-wrap;line-height:1.94;font-size:15px;letter-spacing:-.018em;color:#242a35;overflow-wrap:anywhere}
+.qcard .stem strong{font-weight:950;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+@media(max-width:600px){.mock-passage{padding:19px 16px}.mock-passage-text{font-size:14px;line-height:1.86}}
